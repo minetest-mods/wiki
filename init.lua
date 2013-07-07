@@ -1,17 +1,75 @@
 
 local WP = minetest.get_worldpath().."/wiki"
 
-local DEFAULT_MAIN_PAGE_TEXT = [[
+local internal_pages = {
+----------------------------------------------------------------
+----------------------------------------------------------------
+[".Intro"] = [[
 Thank you for using the Wiki Mod.
 
 This is a mod that allows one to edit pages via a block. You
 can use it to document interesting places in a server, to provide
 a place to post griefing reports, or any kind of text you want.
 
+To create a new page, enter the name in the field at the top of the
+form, then click "Go". If the page already exists, it's contents will
+be displayed. Edit the page as you see fit, then click on "Save" to
+write the changes to disk.
+
+Please note that page names starting with a dot ('.') are reserved
+for internal topics such as this one. Users cannot edit/create such
+pages from the mod interface.
+
+See also:
+  * [.Tags]
+  * [.License]
+]],
+----------------------------------------------------------------
+----------------------------------------------------------------
+[".Tags"] = [[
+The wiki supports some special tags.
+
 You can place hyperlinks to other pages in the Wiki, by surrounding
-text in square brackets (for example, [this is a link]). Such links
+text in square brackets (for example, [.Intro]). Such links will
 appear at the bottom of the form.
-]]
+
+See also:
+  * [.Intro]
+]],
+----------------------------------------------------------------
+----------------------------------------------------------------
+[".License"] = [[
+Wiki Mod for Minetest - License
+-------------------------------
+
+DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+Version 2, December 2004
+
+Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+Everyone is permitted to copy and distribute verbatim or modified
+copies of this license document, and changing it is allowed as long
+as the name is changed.
+
+DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.
+
+See also:
+  * [.Intro]
+]],
+----------------------------------------------------------------
+----------------------------------------------------------------
+[".NotFound"] = [[
+The specified internal page cannot be found. You may want to:
+
+  * Go back to [Main].
+  * Go to [.Intro].
+]],
+----------------------------------------------------------------
+----------------------------------------------------------------
+}
 
 local WIKI_FORMNAME = "wiki:wiki"
 
@@ -37,7 +95,7 @@ local function name_to_filename(name)
 			return ("%%%02X"):format(c:byte(1))
 		end
 	end)
-	return name
+	return name:lower()
 
 end
 
@@ -71,6 +129,8 @@ local function create_wiki_page(name, text)
 
 	if name == "" then return end
 
+	if name:sub(1, 1) == "." then return end
+
 	local fn = WP.."/"..name_to_filename(name)
 
 	local f = io.open(fn, "w")
@@ -90,22 +150,30 @@ local function get_wiki_page(name, player)
 
 	if name == "" then name = "Main" end
 
-	local fn = WP.."/"..name_to_filename(name)
+	local text, links
 
-	local f = io.open(fn)
+	if name:sub(1, 1) == "." then
 
-	local text
+		text = internal_pages[name] or internal_pages[".NotFound"]
+		links = find_links(text)
 
-	if f then
-		text, links = parse_wiki_file(f)
-		f:close()
 	else
-		if name == "Main" then
-			text = DEFAULT_MAIN_PAGE_TEXT
-			links = find_links(text)
+
+		local fn = WP.."/"..name_to_filename(name)
+
+		local f = io.open(fn)
+
+		if f then
+			text, links = parse_wiki_file(f)
+			f:close()
 		else
-			text = "This page does not exist yet."
-			links = { }
+			if name == "Main" then
+				text = internal_pages[".Intro"]
+				links = find_links(text)
+			else
+				text = "This page does not exist yet."
+				links = { }
+			end
 		end
 	end
 
