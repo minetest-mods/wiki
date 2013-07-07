@@ -148,7 +148,7 @@ local function show_wiki_page(player, name)
 	minetest.show_formspec(player, WIKI_FORMNAME, formspec)
 end
 
-minetest.register_node("wiki:personal_wiki", {
+minetest.register_node("wiki:wiki", {
 	description = "Wiki",
 	tiles = { "default_wood.png", "default_wood.png", "default_bookshelf.png" },
 	groups = { choppy=3, oddly_breakable_by_hand=2, flammable=3 },
