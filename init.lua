@@ -1,6 +1,20 @@
 
 local WP = minetest.get_worldpath().."/wiki"
 
+local DEFAULT_MAIN_PAGE_TEXT = [[
+Thank you for using the Wiki Mod.
+
+This is a mod that allows one to edit pages via a block. You
+can use it to document interesting places in a server, to provide
+a place to post griefing reports, or any kind of text you want.
+
+You can place hyperlinks to other pages in the Wiki, by surrounding
+text in square brackets (for example, [this is a link]). Such links
+appear at the bottom of the form.
+]]
+
+local WIKI_FORMNAME = "wiki:wiki"
+
 local f = io.open(WP.."/.dummy")
 if f then
 	f:close()
@@ -36,21 +50,26 @@ local function filename_to_name(filename)
 
 end
 
+local function find_links(text)
+	local links = { }
+	for link in text:gmatch("%[(.-)%]") do
+		links[#links + 1] = link
+	end
+	return links
+end
+
 local function parse_wiki_file(f)
 	local text = ""
-	local links = { }
 	local links_n = 0
 	for line in f:lines() do
-		for link in line:gmatch("<([^>]*)>") do
-			links_n = links_n + 1
-			links[links_n] = link
-		end
 		text = text..line.."\n"
 	end
-	return text, links
+	return text, find_links(text)
 end
 
 local function create_wiki_page(name, text)
+
+	if name == "" then return end
 
 	local fn = WP.."/"..name_to_filename(name)
 
@@ -67,7 +86,9 @@ local function create_wiki_page(name, text)
 
 end
 
-local function get_wiki_page(name)
+local function get_wiki_page(name, player)
+
+	if name == "" then name = "Main" end
 
 	local fn = WP.."/"..name_to_filename(name)
 
@@ -77,41 +98,54 @@ local function get_wiki_page(name)
 
 	if f then
 		text, links = parse_wiki_file(f)
+		f:close()
 	else
-		text = "This page does not exist yet."
-		links = { }
+		if name == "Main" then
+			text = DEFAULT_MAIN_PAGE_TEXT
+			links = find_links(text)
+		else
+			text = "This page does not exist yet."
+			links = { }
+		end
 	end
 
 	local buttons = ""
 	local bx = 0
-	local by = 0
+	local by = 7.5
+
+	local esc = minetest.formspec_escape
 
 	for i, link in ipairs(links) do
 		if (i % 5) == 0 then
 			bx = 0
-			by = by + 0.5
+			by = by + 0.3
 		end
 		link = esc(link)
-		buttons = buttons..(("button[%f,%f;3,0.5;page_%s;%s]"):format(bx, by, link, link))
+		buttons = buttons..(("button[%f,%f;2.4,0.3;page_%s;%s]"):format(bx, by, link, link))
 		bx = bx + 2.4
 	end
 
-	--local esc = minetest.formspec_escape
-	local esc = function(x) return x end
+	local toolbar
 
-	return ("size[12,9]"
+	if minetest.check_player_privs(player, {wiki=true}) then
+		toolbar = "button[0,9;2.4,1;save;Save]"
+	else
+		toolbar = "label[0,9;You are not authorized to edit the wiki.]"
+	end
+
+	return ("size[12,10]"
 		.. "field[0,1;11,1;page;Page;"..esc(name).."]"
 		.. "button[11,1;1,0.5;go;Go]"
-		.. "textarea[0,2;12,7;text;"..esc(name)..";"..esc(text).."]"
+		.. "textarea[0,2;12,6;text;"..esc(name)..";"..esc(text).."]"
 		.. buttons
-		.. "button[0,8;3,1;save;Save]"
+		.. toolbar
 	)
 
 end
 
-local function set_wiki_page(meta, name)
-	meta:set_string("formspec", get_wiki_page(name))
-	meta:set_string("wiki.page", name)
+local function show_wiki_page(player, name)
+	local formspec = get_wiki_page(name, player)
+	minetest.show_formspec(player, WIKI_FORMNAME, formspec)
 end
 
 minetest.register_node("wiki:personal_wiki", {
@@ -122,17 +156,17 @@ minetest.register_node("wiki:personal_wiki", {
 	on_construct = function(pos)
 		local meta = minetest.get_meta(pos)
 		meta:set_string("infotext", "Wiki")
-		set_wiki_page(meta, "Main")
 	end,
-	on_receive_fields = function(pos, formname, fields, sender)
-		local meta = minetest.get_meta(pos)
-		if fields.save then
-			local name = meta:get_string("wiki.page")
-			create_wiki_page(name, fields.text)
-		elseif fields.go then
-			set_wiki_page(meta, fields.page)
+	on_rightclick = function(pos, node, clicker, itemstack)
+		if clicker then
+			show_wiki_page(clicker:get_player_name(), "Main")
 		end
 	end,
+})
+
+minetest.register_privilege("wiki", {
+	description = "Allow editing wiki pages",
+	give_to_singleplayer = true,
 })
 
 local BS = "default:bookshelf"
@@ -141,3 +175,25 @@ minetest.register_craft({
 	output = "wiki:wiki",
 	recipe = { BSL, BSL, BSL },
 })
+
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	if (not formname) or (formname ~= WIKI_FORMNAME) then return end
+	local plname = player:get_player_name()
+	if fields.save then
+		create_wiki_page(fields.page, fields.text)
+		show_wiki_page(plname, fields.page)
+	elseif fields.go then
+		show_wiki_page(plname, fields.page)
+	elseif fields.back then
+		show_wiki_page(plname, prev)
+	else
+		for k in pairs(fields) do
+			if type(k) == "string" then
+				local name = k:match("^page_(.*)")
+				if name then
+					show_wiki_page(plname, name)
+				end
+			end
+		end
+	end
+end)
