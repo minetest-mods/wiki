@@ -89,6 +89,13 @@ The page name you entered is wrong. See [.Page Names] for more info.
 ]],
 ----------------------------------------------------------------
 ----------------------------------------------------------------
+[".Forbidden"] = [[
+You have not enough privileges to view this page.
+
+  * Back to [Main].
+]],
+----------------------------------------------------------------
+----------------------------------------------------------------
 [".Help Index"] = [[
   * [.Page Names]
   * [.User Pages]

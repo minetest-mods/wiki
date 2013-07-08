@@ -1,39 +1,12 @@
 
 local WP = minetest.get_worldpath().."/wiki"
 
+wikilib.path = WP
+
 local WIKI_FORMNAME = "wiki:wiki"
 
-local WIN32, DIR_SEP
-
-if os.getenv("WINDIR") then
-	WIN32 = true
-	DIR_SEP = "\\"
-else
-	WIN32 = false
-	DIR_SEP = "/"
-end
-
-local function mkdir(dir)
-	local f = io.open(dir..DIR_SEP..".dummy")
-	if f then
-		f:close()
-	else
-		if WIN32 then
-			dir = dir:gsub("/", "\\")
-		else
-			dir = dir:gsub("\\", "/")
-		end
-		os.execute("mkdir \""..dir.."\"")
-		local f = io.open(dir..DIR_SEP..".dummy", "w")
-		if f then
-			f:write("DO NOT DELETE!!!\n")
-			f:close()
-		end
-	end
-end
-
-mkdir(WP)
-mkdir(WP.."/users")
+os.mkdir(WP)
+os.mkdir(WP.."/users")
 
 local function name_to_filename(name)
 
@@ -47,29 +20,36 @@ local function name_to_filename(name)
 	return name:lower()
 
 end
+wikilib.name_to_filename = name_to_filename
 
-local function get_page_path(name, player) --> path, is_file
+local function get_page_path(name, player) --> path, is_file, allow_save
+
+	local allow_save = minetest.check_player_privs(player, {wiki=true})
 
 	if name:sub(1, 1) == "." then
 		local text = wikilib.internal_pages[name] or wikilib.internal_pages[".NotFound_Internal"]
-		return text, false
+		return text, false, false
 	elseif name:sub(1, 1) == ":" then
 		if name:match("^:[0-9]?$") then
 			local n = tonumber(name:sub(2,2)) or 0
 			path = "users/"..player.."/page"..n
 			mkdir(WP.."/users/"..player)
-		elseif name:match("^:.-:[1-9]$") then
-			local user, n = name:match("^:(.-):([1-9])$")
+		elseif name:match("^:.-:[0-9]$") then
+			local user, n = name:match("^:(.-):([0-9])$")
+			if (n == "0") and (not minetest.check_player_privs(player, {wiki_admin=true})) then
+				return wikilib.internal_pages[".Forbidden"], false, false
+			end
 			path = "users/"..user.."/page"..n
 			mkdir(WP.."/users/"..user)
+			allow_save = false
 		else
-			return wikilib.internal_pages[".BadPageName"], false
+			return wikilib.internal_pages[".BadPageName"], false, false
 		end
 	else
 		path = name_to_filename(name)
 	end
 
-	return WP.."/"..path, true
+	return WP.."/"..path, true, allow_save
 
 end
 
@@ -77,6 +57,8 @@ local function find_links(lines) --> links
 	local links = { }
 	local links_n = 0
 	for _,line in ipairs(lines) do
+		print("line = \""..tostring(line).."\"")
+		print("type(line) = "..type(line))
 		for link in line:gmatch("%[(.-)%]") do
 			links_n = links_n + 1
 			links[links_n] = link
@@ -85,8 +67,12 @@ local function find_links(lines) --> links
 	return links
 end
 
-local function load_page(name, player) --> text, links
-	local path, is_file = get_page_path(name, player)
+local function load_page(name, player) --> text, links, allow_save
+	local text, allow_save = wikilib.plugin_handle_load(name, player)
+	if text then
+		return text, find_links(text:split("\n")), allow_save
+	end
+	local path, is_file, allow_save = get_page_path(name, player)
 	local f
 	if is_file then
 		f = io.open(path)
@@ -105,14 +91,17 @@ local function load_page(name, player) --> text, links
 	f:close()
 	local text = table.concat(lines, "\n")
 	local links = find_links(lines)
-	return text, links
+	return text, links, allow_save
 end
 
 local function save_page(name, player, text)
 
-	local path, is_file = get_page_path(name, player)
+	local ok = wikilib.plugin_handle_save(name, player, text)
+	if ok then return end
 
-	if not is_file then return end
+	local path, is_file, allow_save = get_page_path(name, player)
+
+	if (not is_file) or (not allow_save) then return end
 
 	local f = io.open(path, "w")
 	if not f then return end
@@ -125,11 +114,11 @@ end
 
 local esc = minetest.formspec_escape
 
-local function show_wiki_page(player, name)
+function wikilib.show_wiki_page(player, name)
 
 	if name == "" then name = "Main" end
 
-	local text, links = load_page(name, player)
+	local text, links, allow_save = load_page(name, player)
 
 	local buttons = ""
 	local bx = 0
@@ -147,7 +136,7 @@ local function show_wiki_page(player, name)
 
 	local toolbar
 
-	if is_user or minetest.check_player_privs(player, {wiki=true}) then
+	if allow_save then
 		toolbar = "button[0,9;2.4,1;save;Save]"
 	else
 		toolbar = "label[0,9;You are not authorized to edit this page.]"
@@ -174,14 +163,19 @@ minetest.register_node("wiki:wiki", {
 	end,
 	on_rightclick = function(pos, node, clicker, itemstack)
 		if clicker then
-			show_wiki_page(clicker:get_player_name(), "Main")
+			wikilib.show_wiki_page(clicker:get_player_name(), "Main")
 		end
 	end,
 })
 
 minetest.register_privilege("wiki", {
-	description = "Allow editing wiki pages",
-	give_to_singleplayer = true,
+	description = "Allow editing wiki pages in the global space",
+	give_to_singleplayer = false,
+})
+
+minetest.register_privilege("wiki_admin", {
+	description = "Allow editing wiki pages in any space",
+	give_to_singleplayer = false,
 })
 
 local BS = "default:bookshelf"
@@ -196,15 +190,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local plname = player:get_player_name()
 	if fields.save then
 		save_page(fields.page, plname, fields.text)
-		show_wiki_page(plname, fields.page)
+		wikilib.show_wiki_page(plname, fields.page)
 	elseif fields.go then
-		show_wiki_page(plname, fields.page)
+		wikilib.show_wiki_page(plname, fields.page)
 	else
 		for k in pairs(fields) do
 			if type(k) == "string" then
 				local name = k:match("^page_(.*)")
 				if name then
-					show_wiki_page(plname, name)
+					wikilib.show_wiki_page(plname, name)
 				end
 			end
 		end
