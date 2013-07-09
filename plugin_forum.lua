@@ -15,9 +15,6 @@ local function get_player_state(name)
 	return player_states[name]
 end
 
-local function post(player, topic, text)
-end
-
 wikilib.register_plugin({
 	regex = "^/ml/.*",
 	description = "Mailing List",
@@ -35,7 +32,8 @@ wikilib.register_plugin({
 				if p then
 					local nl = ((p.text:sub(-1) == "\n") and "" or "\n")
 					text = (text
-						.. "< "..p.who.." said: >\n"
+						.. "[/ml/"..i.."] "
+						.. p.who..":\n"
 						.. p.text..nl
 						.. "\n"
 					)
@@ -49,8 +47,8 @@ wikilib.register_plugin({
 			local text
 			if posts[n] then
 				local nl = ((posts[n].text:sub(-1) == "\n") and "" or "\n")
-				text = ("Post #"..n
-					.. "< "..posts[n].who.." said: >\n"
+				text = ("Post #"..n.." "
+					.. posts[n].who..": [:"..posts[n].who..":profile]\n"
 					.. posts[n].text..nl
 					.. "\n"
 				)
@@ -78,8 +76,7 @@ wikilib.register_plugin({
 				who = player,
 				text = text,
 			}
-			wikilib.show_wiki_page(player, "/ml/recent")
-			return true
+			return "/ml/recent"
 		end
 		return true
 	end,

@@ -33,14 +33,28 @@ local function get_page_path(name, player) --> path, is_file, allow_save
 		if name:match("^:[0-9]?$") then
 			local n = tonumber(name:sub(2,2)) or 0
 			path = "users/"..player.."/page"..n
-			mkdir(WP.."/users/"..player)
+			os.mkdir(WP.."/users/"..player)
+		elseif name == ":profile" then
+			path = "users/"..player.."/profile"
+			os.mkdir(WP.."/users/"..player)
 		elseif name:match("^:.-:[0-9]$") then
 			local user, n = name:match("^:(.-):([0-9])$")
+			if user:find("..[/\\]") then
+				return wikilib.internal_pages[".BadPageName"], false, false
+			end
 			if (n == "0") and (not minetest.check_player_privs(player, {wiki_admin=true})) then
 				return wikilib.internal_pages[".Forbidden"], false, false
 			end
 			path = "users/"..user.."/page"..n
-			mkdir(WP.."/users/"..user)
+			os.mkdir(WP.."/users/"..user)
+			allow_save = false
+		elseif name:match("^:.-:profile$") then
+			local user = name:match("^:(.-):.*$")
+			if user:find("..[/\\]") then
+				return wikilib.internal_pages[".BadPageName"], false, false
+			end
+			path = "users/"..user.."/profile"
+			os.mkdir(WP.."/users/"..user)
 			allow_save = false
 		else
 			return wikilib.internal_pages[".BadPageName"], false, false
@@ -57,8 +71,6 @@ local function find_links(lines) --> links
 	local links = { }
 	local links_n = 0
 	for _,line in ipairs(lines) do
-		print("line = \""..tostring(line).."\"")
-		print("type(line) = "..type(line))
 		for link in line:gmatch("%[(.-)%]") do
 			links_n = links_n + 1
 			links[links_n] = link
@@ -97,7 +109,7 @@ end
 local function save_page(name, player, text)
 
 	local ok = wikilib.plugin_handle_save(name, player, text)
-	if ok then return end
+	if ok then return ok end
 
 	local path, is_file, allow_save = get_page_path(name, player)
 
@@ -125,9 +137,9 @@ function wikilib.show_wiki_page(player, name)
 	local by = 7.5
 
 	for i, link in ipairs(links) do
-		if (i % 5) == 0 then
+		if ((i - 1) % 5) == 0 then
 			bx = 0
-			by = by + 0.3
+			by = by + 0.5
 		end
 		link = esc(link)
 		buttons = buttons..(("button[%f,%f;2.4,0.3;page_%s;%s]"):format(bx, by, link, link))
@@ -189,8 +201,12 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if (not formname) or (formname ~= WIKI_FORMNAME) then return end
 	local plname = player:get_player_name()
 	if fields.save then
-		save_page(fields.page, plname, fields.text)
-		wikilib.show_wiki_page(plname, fields.page)
+		local r = save_page(fields.page, plname, fields.text)
+		if type(r) == "string" then
+			wikilib.show_wiki_page(plname, r)
+		else
+			wikilib.show_wiki_page(plname, fields.page)
+		end
 	elseif fields.go then
 		wikilib.show_wiki_page(plname, fields.page)
 	else
