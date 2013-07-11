@@ -197,7 +197,7 @@ minetest.register_craft({
 	recipe = { BSL, BSL, BSL },
 })
 
-minetest.register_on_player_receive_fields(function(player, formname, fields)
+function wikilib.handle_formspec(player, formname, fields)
 	if (not formname) or (formname ~= WIKI_FORMNAME) then return end
 	local plname = player:get_player_name()
 	if fields.save then
@@ -207,16 +207,23 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		else
 			wikilib.show_wiki_page(plname, fields.page)
 		end
+		return true
 	elseif fields.go then
 		wikilib.show_wiki_page(plname, fields.page)
+		return true
 	else
 		for k in pairs(fields) do
 			if type(k) == "string" then
 				local name = k:match("^page_(.*)")
 				if name then
 					wikilib.show_wiki_page(plname, name)
+					return true
 				end
 			end
 		end
 	end
+end
+
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	wikilib.handle_formspec(player, formspec, fields)
 end)
