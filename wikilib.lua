@@ -126,9 +126,12 @@ end
 
 local esc = minetest.formspec_escape
 
-function wikilib.show_wiki_page(player, name)
+function wikilib.get_wiki_page_formspec(player, name, w, h)
 
 	if name == "" then name = "Main" end
+
+	w = w or 12
+	h = h or 10
 
 	local text, links, allow_save = load_page(name, player)
 
@@ -154,14 +157,19 @@ function wikilib.show_wiki_page(player, name)
 		toolbar = "label[0,9;You are not authorized to edit this page.]"
 	end
 
-	minetest.show_formspec(player, WIKI_FORMNAME, ("size[12,10]"
+	return ("size["..w..","..h.."]"
 		.. "field[0,1;11,1;page;Page;"..esc(name).."]"
 		.. "button[11,1;1,0.5;go;Go]"
 		.. "textarea[0,2;12,6;text;"..esc(name)..";"..esc(text).."]"
 		.. buttons
 		.. toolbar
-	))
+	)
 
+end
+
+function wikilib.show_wiki_page(player, name)
+	local fs = wikilib.get_wiki_page_formspec(player, name)
+	minetest.show_formspec(player, WIKI_FORMNAME, fs)
 end
 
 minetest.register_node("wiki:wiki", {
