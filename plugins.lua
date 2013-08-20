@@ -3,6 +3,7 @@
 plugindef = {
 	regex = "^/foo/bar/.*",
 	description = "My Awesome Plugin",
+	^ Can contain links
 	load_page = func(entry, player),
 	^ Must return text, allow_save
 	save_page = func(entry, player),
@@ -31,3 +32,5 @@ end
 function wikilib.plugin_handle_save(entry, player, text)
 	return do_handle("save_page", entry, player, text)
 end
+
+wikilib.registered_plugins = plugin_defs

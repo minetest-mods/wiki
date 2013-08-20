@@ -17,7 +17,7 @@ end
 
 wikilib.register_plugin({
 	regex = "^/ml/.*",
-	description = "Mailing List",
+	description = "Mailing List [/ml/recent]",
 	load_page = function(entry, player) --> text, allow_save
 		local state = get_player_state(player)
 		local what = entry:match("^/ml/(.*)")

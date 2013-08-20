@@ -21,6 +21,7 @@ pages from the mod interface.
 See also:
   * [.Tags]
   * [.License]
+  * [.Help Index]
 ]],
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -79,6 +80,7 @@ The specified internal page cannot be found. You may want to:
 This page does not exist yet.
 
   * Back to [Main].
+  * Go to [.Help Index].
 ]],
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -86,6 +88,7 @@ This page does not exist yet.
 The page name you entered is wrong. See [.Page Names] for more info.
 
   * Back to [Main].
+  * Go to [.Help Index].
 ]],
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -93,10 +96,13 @@ The page name you entered is wrong. See [.Page Names] for more info.
 You have not enough privileges to view this page.
 
   * Back to [Main].
+  * Go to [.Help Index].
 ]],
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 [".Help Index"] = [[
+  * [.Intro]
+  * [.Plugins]
   * [.Page Names]
   * [.User Pages]
 
@@ -139,6 +145,20 @@ use it to write down secret locations, etc.
   * Private page: [:0]
   * Pages: [:1] [:2] [:3] [:4] [:5] [:6] [:7] [:8] [:9]
 ]],
+----------------------------------------------------------------
+----------------------------------------------------------------
+[".Plugins"] = function()
+	local page = "Installed Plugins:\n\n"
+	for _,plugin in ipairs(wikilib.registered_plugins) do
+		page = page.."  * "..plugin.description.."\n"
+	end
+	page = (page
+		.. "\n"
+		.. "  * Back to [.Help Index].\n"
+		.. "  * Back to [Main].\n"
+	)
+	return page
+end,
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 }

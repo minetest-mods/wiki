@@ -28,6 +28,9 @@ local function get_page_path(name, player) --> path, is_file, allow_save
 
 	if name:sub(1, 1) == "." then
 		local text = wikilib.internal_pages[name] or wikilib.internal_pages[".NotFound_Internal"]
+		if type(text) == "function" then
+			text = text(player)
+		end
 		return text, false, false
 	elseif name:sub(1, 1) == ":" then
 		if name:match("^:[0-9]?$") then
@@ -233,5 +236,5 @@ function wikilib.handle_formspec(player, formname, fields)
 end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-	wikilib.handle_formspec(player, formspec, fields)
+	wikilib.handle_formspec(player, formname, fields)
 end)
