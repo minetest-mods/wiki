@@ -1,12 +1,18 @@
 
 local WP = minetest.get_worldpath().."/wiki"
 
-wikilib.path = WP
+wikilib.paths = { }
+wikilib.paths.root = WP
+wikilib.paths.pages = WP.."/pages"
+wikilib.paths.plugins = WP.."/plugins"
+wikilib.paths.users = WP.."/users"
 
 local WIKI_FORMNAME = "wiki:wiki"
 
 os.mkdir(WP)
-os.mkdir(WP.."/users")
+os.mkdir(wikilib.paths.pages)
+os.mkdir(wikilib.paths.plugins)
+os.mkdir(wikilib.paths.users)
 
 local function name_to_filename(name)
 
@@ -36,10 +42,10 @@ local function get_page_path(name, player) --> path, is_file, allow_save
 		if name:match("^:[0-9]?$") then
 			local n = tonumber(name:sub(2,2)) or 0
 			path = "users/"..player.."/page"..n
-			os.mkdir(WP.."/users/"..player)
+			os.mkdir(wikilib.paths.users.."/"..player)
 		elseif name == ":profile" then
 			path = "users/"..player.."/profile"
-			os.mkdir(WP.."/users/"..player)
+			os.mkdir(wikilib.paths.users.."/"..player)
 		elseif name:match("^:.-:[0-9]$") then
 			local user, n = name:match("^:(.-):([0-9])$")
 			if user:find("..[/\\]") then
@@ -63,7 +69,7 @@ local function get_page_path(name, player) --> path, is_file, allow_save
 			return wikilib.internal_pages[".BadPageName"], false, false
 		end
 	else
-		path = name_to_filename(name)
+		path = "pages/"..name_to_filename(name)
 	end
 
 	return WP.."/"..path, true, allow_save
