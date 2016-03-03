@@ -135,41 +135,38 @@ end
 
 local esc = minetest.formspec_escape
 
-function wikilib.get_wiki_page_formspec(player, name, w, h)
+function wikilib.get_wiki_page_formspec(player, name)
 
 	if name == "" then name = "Main" end
 
-	w = w or 12
-	h = h or 10
-
 	local text, links, allow_save = load_page(name, player)
 
-	local buttons = ""
-	local bx = 0
-	local by = 7.5
+	local buttons, nbuttons = { }, 0
+	local bx, by = 12, 1.1
 
 	for i, link in ipairs(links) do
-		if ((i - 1) % 5) == 0 then
-			bx = 0
-			by = by + 0.5
+		if i%15 == 0 then
+			bx = bx + 2
+			by = 1.1
 		end
 		link = esc(link)
-		buttons = buttons..(("button[%f,%f;2.4,0.3;page_%s;%s]"):format(bx, by, link, link))
-		bx = bx + 2.4
+		nbuttons = nbuttons + 1
+		buttons[nbuttons] = (("button[%f,%f;2.1,0.5;page_%s;%s]")
+				:format(bx, by, link, link))
+		by = by + 0.65
 	end
+	buttons = table.concat(buttons)
 
-	local toolbar
+	local toolbar = (allow_save
+			and "button[-.1,9.2;2.4,1;save;Save]"
+			or "label[0,9;You are not authorized to edit this page.]")
 
-	if allow_save then
-		toolbar = "button[0,9;2.4,1;save;Save]"
-	else
-		toolbar = "label[0,9;You are not authorized to edit this page.]"
-	end
-
-	return ("size["..w..","..h.."]"
-		.. "field[0,1;11,1;page;Page;"..esc(name).."]"
-		.. "button[11,1;1,0.5;go;Go]"
-		.. "textarea[0,2;12,6;text;"..esc(name)..";"..esc(text).."]"
+	return ("size[16,10]"
+		.. "label[-0.1,0;Page]"
+		.. "field[1.5,0.1;13,1;page;;"..esc(name).."]"
+		.. "button[14,0;1,0.5;go;Go]"
+		.. "button_exit[15,0;1,0.5;close;X]"
+		.. "textarea[0.2,1.1;12,9;text;"..esc(name)..";"..esc(text).."]"
 		.. buttons
 		.. toolbar
 	)
@@ -216,6 +213,7 @@ minetest.register_craft({
 
 function wikilib.handle_formspec(player, formname, fields)
 	if (not formname) or (formname ~= WIKI_FORMNAME) then return end
+	if fields.quit or fields.close then return end
 	local plname = player:get_player_name()
 	if fields.save then
 		local r = save_page(fields.page, plname, fields.text)
