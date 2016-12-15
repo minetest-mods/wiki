@@ -1,14 +1,16 @@
 
+local private = ...
+
 local BASEPATH = wikilib.paths.plugins.."/ml"
 
-os.mkdir(BASEPATH)
+private.mkdir(BASEPATH)
 
 local ML_DB_FILE = BASEPATH.."/posts.dat"
 
 local posts = { }
 
 local function load_posts()
-	local f = io.open(ML_DB_FILE, "r")
+	local f = private.open(ML_DB_FILE, "r")
 	if not f then return false end
 	local list = { }
 	local post = { text="" }
@@ -36,7 +38,7 @@ local function load_posts()
 end
 
 local function save_posts()
-	local f = io.open(ML_DB_FILE, "w")
+	local f = private.open(ML_DB_FILE, "w")
 	if not f then return false end
 	for _, post in ipairs(posts) do
 		f:write("From: "..post.who.."\n")

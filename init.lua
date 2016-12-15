@@ -3,10 +3,17 @@ local MODPATH = minetest.get_modpath("wiki")
 
 wikilib = { }
 
-dofile(MODPATH.."/strfile.lua")
-dofile(MODPATH.."/oshelpers.lua")
-dofile(MODPATH.."/wikilib.lua")
-dofile(MODPATH.."/internal.lua")
-dofile(MODPATH.."/plugins.lua")
+local ie = minetest.request_insecure_environment()
+assert(ie, "you must allow `wiki` in `secure.trusted_mods`")
 
-dofile(MODPATH.."/plugin_forum.lua")
+local private = { }
+
+private.open = ie.io.open
+private.mkdir = ie.core.mkdir
+
+loadfile(MODPATH.."/strfile.lua")(private)
+loadfile(MODPATH.."/wikilib.lua")(private)
+loadfile(MODPATH.."/internal.lua")(private)
+loadfile(MODPATH.."/plugins.lua")(private)
+
+loadfile(MODPATH.."/plugin_forum.lua")(private)
