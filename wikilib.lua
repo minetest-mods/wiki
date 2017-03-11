@@ -182,7 +182,7 @@ end
 
 minetest.register_node("wiki:wiki", {
 	description = "Wiki",
-	tiles = { "default_wood.png", "default_wood.png", "default_bookshelf.png" },
+	tiles = { "wiki_top.png", "default_wood.png", "wiki_side.png" },
 	groups = { choppy=3, oddly_breakable_by_hand=2, flammable=3 },
 	sounds = default.node_sound_wood_defaults(),
 	on_construct = function(pos)
