@@ -3,13 +3,10 @@ local MODPATH = minetest.get_modpath("wiki")
 
 wikilib = { }
 
-local ie = minetest.request_insecure_environment()
-assert(ie, "you must allow `wiki` in `secure.trusted_mods`")
-
-local private = { }
-
-private.open = ie.io.open
-private.mkdir = ie.core.mkdir
+-- TODO: just adopt io.open and minetest.mkdir
+local private = {}
+private.open = io.open
+private.mkdir = minetest.mkdir
 
 loadfile(MODPATH.."/strfile.lua")(private)
 loadfile(MODPATH.."/wikilib.lua")(private)
