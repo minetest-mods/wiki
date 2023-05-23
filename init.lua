@@ -11,6 +11,7 @@ private.mkdir = minetest.mkdir
 loadfile(MODPATH.."/strfile.lua")(private)
 loadfile(MODPATH.."/wikilib.lua")(private)
 loadfile(MODPATH.."/internal.lua")(private)
+loadfile(MODPATH.."/wikicmd.lua")(private)
 loadfile(MODPATH.."/plugins.lua")(private)
 
 loadfile(MODPATH.."/plugin_forum.lua")(private)
